@@ -29,6 +29,190 @@ flowchart LR
   E -->|"Tailscale Serve"| F["iPhone 复盘"]
 ```
 
+## 第一次使用，请先读这里
+
+### 先说结论：目前不是“一键安装”
+
+这个项目已经能跑通完整闭环，但 v0.1.0 仍然是一个可复用的 MVP，不是普通
+App Store App。第一次配置需要同时连接 ChatGPT、Codex、Mac 和 Tailscale，
+通常需要 30–60 分钟。
+
+如果你从未使用过终端、Node.js 或 Tailscale，不建议独自逐条敲完所有命令。
+最简单的做法是：
+
+1. 你亲自完成需要登录账号的步骤；
+2. 让 Codex 帮你完成 Mac 上的下载、安装、配置和检查；
+3. 每完成一步，都先确认“成功标志”，再继续下一步。
+
+这说明当前流程仍有简化空间。后续版本最值得增加的是安装向导：自动检查
+Node.js、生成私人配置、安装 Mac 常驻服务并检测 Tailscale。现在的 README
+保留完整手动方法，是为了让每一步都能检查、排错和复现。
+
+### 四个容易混淆的名词
+
+- **ChatGPT 项目**：ChatGPT 中装着 Instructions 和若干聊天的文件夹。它不是
+  GitHub 仓库，也不是 Mac 文件夹。
+- **Live 口语聊天**：必须建立在上述 ChatGPT 项目内部。你在手机上从这个聊天
+  打开 Voice/Live，项目 Instructions 才会应用。
+- **Codex 项目**：Mac 上克隆下来的 Gian Oral Practice 代码文件夹。Codex
+  从这里运行同步规则。
+- **PWA**：一个可以添加到手机主屏幕的网页。它看起来像 App，但内容实际来自
+  你自己的 Mac。
+
+### 最省心的安装路线
+
+你只需要亲自完成带“你操作”的步骤；其余步骤可以直接让 Codex处理。
+
+#### 第 1 步：确认你拥有需要的设备和账号
+
+你操作：
+
+- 一台能长期在线的 Mac mini 或其他 Mac；
+- 一部用于 ChatGPT Live 和复盘的手机；
+- 一个能使用 ChatGPT Projects 与 Live/Voice 的 ChatGPT 账号；
+- Mac 上可以使用 Codex；
+- Mac 和手机都能安装 Tailscale。
+
+成功标志：手机可以正常进行一次 ChatGPT 语音对话，Mac 可以打开 Codex。
+
+如果缺少 ChatGPT Projects、Live/Voice 或 Codex 的聊天读取能力，请先不要
+继续自动同步部分。App 本身仍可安装，但闭环无法完全自动化。
+
+#### 第 2 步：让 Codex 安装公开版
+
+在 Codex 中新建一个普通任务，把下面这句话发给它：
+
+```text
+请从 https://github.com/giantsand26/Gian-oral-practice 安装 Gian Oral Practice。
+只操作一个新的独立目录，不要修改我已有的任何英语练习 App。
+按照 README 检查 Node.js，安装依赖，运行构建和测试；每遇到需要登录账号、
+改变系统设置或覆盖文件时先问我。
+```
+
+如果你选择手动安装，请跳到下方“在 Mac 上安装 App”。不要求安装 Homebrew。
+
+成功标志：
+
+- Codex 告诉你构建和测试通过；
+- Mac 浏览器能打开 `http://127.0.0.1:3000`；
+- 页面标题是 `Gian Oral Practice`，并能看到虚构演示记录。
+
+#### 第 3 步：建立 ChatGPT 项目
+
+你操作：
+
+1. 打开 ChatGPT。
+2. 新建一个 Project，建议命名为 `Gian Oral Practice`。
+3. 打开该项目的 Project Instructions。
+4. 打开仓库中的
+   [`prompts/chatgpt-project-instructions.md`](prompts/chatgpt-project-instructions.md)，
+   全选并复制全部内容，粘贴到 Project Instructions 后保存。
+5. 回到这个项目内部，新建聊天 `Daily English Speaking`。
+
+不要先在 ChatGPT 首页建立普通聊天再直接开始练习。请确认
+`Daily English Speaking` 显示在 `Gian Oral Practice` 项目里面；如果建错了，
+通过聊天菜单把它移动到该项目。
+
+成功标志：在这个聊天里输入 `反馈` 时，ChatGPT 知道需要生成五项评分、错误
+详情和应记忆句子，而不是只给一句普通评论。
+
+#### 第 4 步：让 Codex连接你的 ChatGPT 项目
+
+你操作：
+
+1. 用电脑浏览器分别打开刚才的 ChatGPT 项目和
+   `Daily English Speaking` 聊天。
+2. 复制这两个页面的网址。
+3. 把网址交给已经打开 Gian Oral Practice 仓库的 Codex。
+
+对 Codex 说：
+
+```text
+请按照 AGENTS.example.md 为我建立私有 AGENTS.md。
+这是我自己的 ChatGPT 项目网址：<粘贴项目网址>
+这是 Daily English Speaking 聊天网址：<粘贴聊天网址>
+我的时区是：<例如 Asia/Shanghai>
+请自动识别可以识别的信息；不要把这些私人 ID 提交到 GitHub。
+完成后先做只读连接检查，不要导入虚构数据。
+```
+
+小白不需要手工研究 project ID 和 thread ID。优先让 Codex 从你提供的网址或
+它能访问的聊天信息中识别。如果 Codex 明确说它没有读取 ChatGPT 项目聊天的
+能力，不要反复修改 `AGENTS.md`：问题是数据通道未开放，不是 ID 写错。
+
+成功标志：Codex 能只读找到 `Daily English Speaking`，并明确告诉你目前
+“没有新推送”或找到了正确的 READY 报告。
+
+#### 第 5 步：先手动跑通一次完整练习
+
+在手机 ChatGPT 中：
+
+1. 打开 `Gian Oral Practice` 项目；
+2. 进入 `Daily English Speaking`；
+3. 从这个聊天打开 Live/Voice，进行几分钟英语对话；
+4. 结束语音后，在同一聊天单独输入 `反馈`；
+5. 看到完整报告后，单独输入 `推送`；
+6. 确认 ChatGPT 只返回一行 `NONG_PUSH_READY <报告id>`。
+
+然后在 Codex 的 Gian Oral Practice 项目中输入：
+
+```text
+同步
+```
+
+成功标志：Codex 显示导入成功；刷新 Mac 上的 App 后，Latest 页面出现刚才
+练习的日期、时间、主题和五项评分。
+
+如果这一步失败，暂时不要配置定时任务。先查看下方故障排查，把手动闭环跑通。
+
+#### 第 6 步：用 Tailscale 在手机查看
+
+你操作：
+
+1. 在 Mac 和手机安装 Tailscale；
+2. 两台设备登录同一个、属于你自己的 Tailscale 账号；
+3. 确认两台设备在 Tailscale 中都显示在线。
+
+然后让 Codex 执行：
+
+```text
+请按照 README 为 Gian Oral Practice 配置仅限我自己 tailnet 使用的
+Tailscale Serve。禁止使用 Funnel，不要公开到互联网。完成后把手机访问地址
+告诉我，并检查 App 首页和 /api/health。
+```
+
+成功标志：手机关闭普通局域网也能通过
+`https://<你的设备>.<你的tailnet>.ts.net/` 打开 App，并显示最新记录。
+
+#### 第 7 步：最后再开启自动运行和定时同步
+
+只有第 5、6 步成功后，才让 Codex：
+
+```text
+请按照 README 安装 Gian Oral Practice 的 Mac 登录后自动运行配置，
+然后建立每天 08:00、13:00、23:00 的同步任务。不要修改其他 App 或
+LaunchAgent。完成后分别检查本地 App、API 和自动化状态。
+```
+
+成功标志：
+
+- Mac 重新登录后 App 能重新启动；
+- Codex 中可以看到三个同步时间；
+- 临时需要更新时，仍可随时在 Codex 输入 `同步`。
+
+### 配好以后，每天只需要这样用
+
+日常使用不需要再敲终端命令：
+
+1. 手机进入项目内的 `Daily English Speaking`，打开 Live；
+2. 练习结束后输入 `反馈`；
+3. 确认报告后输入 `推送`；
+4. 等自动同步，或者去 Codex 输入 `同步`；
+5. 打开手机桌面的 Gian Oral Practice 查看和复习。
+
+下面的内容是完整的手动安装、原理和排错说明。已经按上面的推荐路线配置成功，
+可以直接跳到“故障排查”或“English”。
+
 ## 前置条件
 
 要完整复现闭环，需要以下条件。只安装网页代码还不能自动读取 ChatGPT。
