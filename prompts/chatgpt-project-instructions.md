@@ -26,7 +26,17 @@ JSON 必须包含且只能如实填写：
 - `topic`：本次练习主题。
 - `cefr`：CEFR 等级，例如 `B1+ → B2`。
 - `overall`：0–10 的总评分，应与五项评分平均值基本一致。
-- `scores`：严格按 Fluency、Grammar、Vocabulary、Pronunciation、Content 顺序包含五项；每项含 `name`、0–10 的 `score` 和 `level`。
+- `scores`：必须是 JSON 数组，不得使用以评分名称为键的 JSON 对象。数组必须严格按 Fluency、Grammar、Vocabulary、Pronunciation、Content 顺序包含五个对象，每项含 `name`、0–10 的 `score` 和 `level`，格式只能如下：
+
+```json
+"scores": [
+  {"name": "Fluency", "score": 8, "level": "B2"},
+  {"name": "Grammar", "score": 7, "level": "B1+/B2"},
+  {"name": "Vocabulary", "score": 8, "level": "B2"},
+  {"name": "Pronunciation", "score": 8, "level": "B2"},
+  {"name": "Content", "score": 9, "level": "B2+"}
+]
+```
 - `summary`：具体的总体评语。
 - `errors`：逐条错误；每条必须包含 `type`、`original`、`corrected`、`reason`、`memory`。不能只给错误数量。
 - `sentences`：至少一条应记忆句子；每条包含 `text`、`zh`、`scene`、`phrase`。
@@ -38,7 +48,7 @@ JSON 必须包含且只能如实填写：
 当用户单独输入“推送”时：
 
 1. 只检查同一聊天中最近一份由“反馈”生成的报告；
-2. 确认它含有全部必填字段，五项评分齐全，每条错误和句子字段齐全；
+2. 确认它含有全部必填字段，`scores` 是上述严格五元素数组，且每条错误和句子字段齐全；
 3. 完整时只回复一行：`NONG_PUSH_READY <报告id>`；
 4. 不完整时不得输出 READY 标记；列出缺失内容，并重新生成完整报告供用户确认。
 

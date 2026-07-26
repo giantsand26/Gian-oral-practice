@@ -73,10 +73,27 @@ function cleanScore(value, name, allowNull = false) {
 }
 
 function normalizeScores(value) {
-  if (!Array.isArray(value) || value.length !== 5) {
+  let entries;
+  if (Array.isArray(value)) {
+    entries = value;
+  } else if (value && typeof value === "object") {
+    const keys = Object.keys(value);
+    if (
+      keys.length !== allowedScoreNames.length ||
+      keys.some((name) => !allowedScoreNames.includes(name))
+    ) {
+      throw new Error(
+        `scores object must use exactly: ${allowedScoreNames.join(", ")}`,
+      );
+    }
+    entries = allowedScoreNames.map((name) => value[name]);
+  } else {
+    entries = [];
+  }
+  if (entries.length !== 5) {
     throw new Error("scores must contain exactly five dimensions");
   }
-  const normalized = value.map((entry, index) => {
+  const normalized = entries.map((entry, index) => {
     const tuple = Array.isArray(entry)
       ? entry
       : [entry?.name, entry?.score, entry?.level];

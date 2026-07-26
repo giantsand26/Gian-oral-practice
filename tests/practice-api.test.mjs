@@ -123,6 +123,42 @@ test("securely stores, lists and deduplicates complete practice reports", async 
     assert.equal(created.status, 201);
     assert.equal((await created.json()).id, sampleReport.id);
 
+    const objectScoreReport = {
+      ...sampleReport,
+      id: "practice-2026-07-25-object-scores",
+      sourceTurnId: "test-source-turn-object-scores",
+      scores: Object.fromEntries(
+        sampleReport.scores.map((score) => [score.name, score]),
+      ),
+    };
+    const objectScoresCreated = await fetch(`${api.baseUrl}/api/practices`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${api.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(objectScoreReport),
+    });
+    assert.equal(objectScoresCreated.status, 201);
+
+    const invalidObjectScores = await fetch(`${api.baseUrl}/api/practices`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${api.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...objectScoreReport,
+        id: "practice-2026-07-25-extra-score",
+        sourceTurnId: "test-source-turn-extra-score",
+        scores: {
+          ...objectScoreReport.scores,
+          Extra: { name: "Extra", score: 10, level: "C2" },
+        },
+      }),
+    });
+    assert.equal(invalidObjectScores.status, 400);
+
     const duplicate = await fetch(`${api.baseUrl}/api/practices`, {
       method: "POST",
       headers: {
@@ -219,7 +255,7 @@ test("securely stores, lists and deduplicates complete practice reports", async 
     const listed = await fetch(`${api.baseUrl}/api/practices`);
     assert.equal(listed.status, 200);
     const body = await listed.json();
-    assert.equal(body.practices.length, 2);
+    assert.equal(body.practices.length, 3);
     assert.equal(
       body.practices.find((item) => item.id === importedReport.id)?.topic,
       importedReport.topic,

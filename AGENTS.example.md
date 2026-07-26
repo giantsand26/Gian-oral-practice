@@ -41,6 +41,12 @@ report only when all of these conditions are true in the same ChatGPT chat:
    Fluency/Grammar/Vocabulary/Pronunciation/Content, `summary`, detailed
    `errors` (`original`, `corrected`, `reason`, `memory`), and `sentences`.
 
+Prefer `scores` as a five-element array in that fixed order. If ChatGPT returns
+an object whose keys are exactly the five dimension names and every nested
+`name`, `score`, and `level` is complete, allow only a mechanical
+object-to-array normalization without changing any value. Reject missing,
+extra, duplicated, or unknown dimensions.
+
 Add `sourceTurnId` using the real ChatGPT model-message ID that contained the
 report JSON. Never invent or substitute an ID.
 
