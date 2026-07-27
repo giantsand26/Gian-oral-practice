@@ -39,7 +39,11 @@ report only when all of these conditions are true in the same ChatGPT chat:
 5. The ID matches `^[A-Za-z0-9][A-Za-z0-9_-]{0,119}$`.
 6. Required values exist: `date`, `time`, `topic`, `cefr`, `overall`,
    Fluency/Grammar/Vocabulary/Pronunciation/Content, `summary`, detailed
-   `errors` (`original`, `corrected`, `reason`, `memory`), and `sentences`.
+   `errors` (`original`, `corrected`, `reason`, `memory`), 1–4 complete
+   `sentences`, and 1–5 complete `phrases` (`text`, `zh`, `example`).
+   Rank candidates only within that specific conversation, then keep its best
+   1–4 for naturalness, expressiveness, and reusability. Faithful polishing is
+   allowed; unrelated or artificially literary invention and padding are not.
 
 Prefer `scores` as a five-element array in that fixed order. If ChatGPT returns
 an object whose keys are exactly the five dimension names and every nested

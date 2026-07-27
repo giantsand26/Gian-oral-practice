@@ -13,7 +13,7 @@ npm --version
 npm ci
 npm run build
 npm test
-npm start
+GIAN_ALLOWED_HOSTS="<你的准确Tailscale主机名>.ts.net" npm start
 ```
 
 服务地址：
@@ -53,6 +53,8 @@ cp ops/com.gian.oral-practice.plist.example \
 
 - `<ABSOLUTE_APP_DIRECTORY>` 替换为 `pwd` 的结果；
 - `<ABSOLUTE_NPM_PATH>` 替换为 `which npm` 的结果。
+- `<EXACT_TAILSCALE_HOSTNAME>` 替换为 `tailscale serve status` 显示的准确
+  `.ts.net` 主机名，不要填写通配符或其他域名。
 
 加载：
 
@@ -82,6 +84,8 @@ tailscale serve status
 ```
 
 只使用 Serve，禁止 Funnel。保持服务绑定 `127.0.0.1`。
+服务只接受 localhost 和你在 `GIAN_ALLOWED_HOSTS` 中明确填写的 Tailscale
+主机名；这是为了防止恶意网页借 DNS 重绑定读取本地练习记录。
 
 ## 手动导入报告
 

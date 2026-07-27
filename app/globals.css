@@ -855,6 +855,21 @@ blockquote {
   margin-bottom: 19px;
 }
 
+.library-mode-tabs {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.library-mode-tabs button {
+  flex: 1;
+  padding: 11px 14px;
+  font-size: 18px;
+}
+
+.phrase-heading {
+  margin-bottom: 16px;
+}
+
 .segmented {
   display: flex;
   padding: 3px;
@@ -1022,6 +1037,78 @@ blockquote {
 .library-empty span {
   font-size: 17px;
   line-height: 1.5;
+}
+
+.phrase-list {
+  display: grid;
+  gap: 12px;
+}
+
+.phrase-selection-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 2px 12px;
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.phrase-library-card {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 9px;
+  padding: 19px 15px 17px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f7faf7);
+}
+
+.phrase-library-card.selected {
+  border-color: #9bbda9;
+  background: #f5faf6;
+}
+
+.phrase-library-card.selected .selection {
+  background: var(--green);
+  box-shadow: none;
+}
+
+.phrase-library-copy > p:first-child {
+  margin: 0 0 6px;
+  color: var(--green-dark);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.phrase-library-copy > span {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.phrase-library-copy blockquote {
+  margin: 13px 0 0;
+  padding: 11px 13px;
+  border-left: 3px solid #9bbda9;
+  border-radius: 0 12px 12px 0;
+  background: #f0f5f1;
+  color: var(--muted);
+  font-size: 17px;
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.phrase-library-card > button:not(.selection) {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: #eef4ef;
+  color: var(--green-dark);
+  font-size: 18px;
 }
 
 @media (max-width: 430px) {

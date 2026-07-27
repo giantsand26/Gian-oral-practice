@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -38,6 +39,13 @@ const sampleReport = {
       zh: "持续练习会带来改变。",
       scene: "总结学习习惯",
       phrase: "make a difference",
+    },
+  ],
+  phrases: [
+    {
+      text: "make a difference",
+      zh: "产生影响；带来改变",
+      example: "Consistent practice makes a difference.",
     },
   ],
   sourceTurnId: "test-source-turn",
@@ -94,6 +102,19 @@ test("securely stores, lists and deduplicates complete practice reports", async 
   try {
     const health = await fetch(`${api.baseUrl}/api/health`);
     assert.equal(health.status, 200);
+    const rejectedHostStatus = await new Promise((resolve, reject) => {
+      const pending = request(
+        `${api.baseUrl}/api/health`,
+        { headers: { Host: "attacker.example" } },
+        (response) => {
+          response.resume();
+          resolve(response.statusCode);
+        },
+      );
+      pending.once("error", reject);
+      pending.end();
+    });
+    assert.equal(rejectedHostStatus, 421);
 
     const unauthorized = await fetch(`${api.baseUrl}/api/practices`, {
       method: "POST",
@@ -158,6 +179,108 @@ test("securely stores, lists and deduplicates complete practice reports", async 
       }),
     });
     assert.equal(invalidObjectScores.status, 400);
+
+    const fourSentenceReport = {
+      ...sampleReport,
+      id: "practice-2026-07-25-four-sentences",
+      sourceTurnId: "test-source-turn-four-sentences",
+      sentences: Array.from({ length: 4 }, (_, index) => ({
+        text: `Useful sentence number ${index + 1}.`,
+        zh: `值得记忆的句子 ${index + 1}。`,
+        scene: "测试不同数量的记忆句",
+        phrase: `useful phrase ${index + 1}`,
+      })),
+    };
+    const fourSentencesCreated = await fetch(`${api.baseUrl}/api/practices`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${api.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(fourSentenceReport),
+    });
+    assert.equal(fourSentencesCreated.status, 201);
+
+    for (const sentences of [[], [
+      ...fourSentenceReport.sentences,
+      {
+        text: "This fifth sentence must be rejected.",
+        zh: "第五句话必须被拒绝。",
+        scene: "数量上限测试",
+        phrase: "must be rejected",
+      },
+    ]]) {
+      const response = await fetch(`${api.baseUrl}/api/practices`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${api.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...sampleReport,
+          id: `practice-invalid-sentence-count-${sentences.length}`,
+          sourceTurnId: `invalid-sentence-count-${sentences.length}`,
+          sentences,
+        }),
+      });
+      assert.equal(response.status, 400);
+    }
+
+    const missingPhrases = { ...sampleReport };
+    delete missingPhrases.phrases;
+    const missingPhrasesResponse = await fetch(`${api.baseUrl}/api/practices`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${api.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...missingPhrases,
+        id: "practice-missing-phrases",
+        sourceTurnId: "test-source-turn-missing-phrases",
+      }),
+    });
+    assert.equal(missingPhrasesResponse.status, 400);
+
+    for (let count = 2; count <= 5; count += 1) {
+      const response = await fetch(`${api.baseUrl}/api/practices`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${api.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...sampleReport,
+          id: `practice-2026-07-25-${count}-phrases`,
+          sourceTurnId: `test-source-turn-${count}-phrases`,
+          phrases: Array.from({ length: count }, (_, index) => ({
+            text: `phrase ${index + 1}`,
+            zh: `搭配 ${index + 1}`,
+            example: `This example uses phrase ${index + 1}.`,
+          })),
+        }),
+      });
+      assert.equal(response.status, 201);
+    }
+
+    const sixPhrases = await fetch(`${api.baseUrl}/api/practices`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${api.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...sampleReport,
+        id: "practice-six-phrases",
+        sourceTurnId: "test-source-turn-six-phrases",
+        phrases: Array.from({ length: 6 }, (_, index) => ({
+          text: `phrase ${index + 1}`,
+          zh: `搭配 ${index + 1}`,
+          example: `This example uses phrase ${index + 1}.`,
+        })),
+      }),
+    });
+    assert.equal(sixPhrases.status, 400);
 
     const duplicate = await fetch(`${api.baseUrl}/api/practices`, {
       method: "POST",
@@ -255,7 +378,7 @@ test("securely stores, lists and deduplicates complete practice reports", async 
     const listed = await fetch(`${api.baseUrl}/api/practices`);
     assert.equal(listed.status, 200);
     const body = await listed.json();
-    assert.equal(body.practices.length, 3);
+    assert.equal(body.practices.length, 8);
     assert.equal(
       body.practices.find((item) => item.id === importedReport.id)?.topic,
       importedReport.topic,
@@ -264,6 +387,7 @@ test("securely stores, lists and deduplicates complete practice reports", async 
       body.practices[0].scores.map(([name]) => name),
       ["Fluency", "Grammar", "Vocabulary", "Pronunciation", "Content"],
     );
+    assert.equal("sourceTurnId" in body.practices[0], false);
   } finally {
     api.child.kill("SIGTERM");
     await rm(api.dataDirectory, { recursive: true, force: true });

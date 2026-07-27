@@ -92,6 +92,16 @@ function getScoreTotal(scores: Practice["scores"]) {
   };
 }
 
+function sanitizeStoredIds(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (id): id is string =>
+        typeof id === "string" && id.length > 0 && id.length <= 300,
+    )
+    .slice(-1000);
+}
+
 function practiceTimestamp(practice: Practice) {
   return (
     practice.receivedAt ||
@@ -289,8 +299,13 @@ export default function Home() {
   const [selected, setSelected] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [deletedSentenceIds, setDeletedSentenceIds] = useState<string[]>([]);
+  const [selectedPhrases, setSelectedPhrases] = useState<string[]>([]);
+  const [deletedPhraseIds, setDeletedPhraseIds] = useState<string[]>([]);
   const [toast, setToast] = useState("");
   const [sentenceFilter, setSentenceFilter] = useState("all");
+  const [libraryMode, setLibraryMode] = useState<"sentences" | "phrases">(
+    "sentences",
+  );
   const [syncError, setSyncError] = useState("");
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -299,15 +314,64 @@ export default function Home() {
 
   const allSentences = useMemo(
     () =>
-      practices.flatMap((practice) =>
-        practice.sentences.map((sentence) => ({
-          ...sentence,
-          topic: practice.topic,
-          time: practice.time,
-          date: practice.displayDate,
-        })),
-      ).filter((sentence) => !deletedSentenceIds.includes(sentence.id)),
+      practices
+        .flatMap((practice) =>
+          (Array.isArray(practice.sentences) ? practice.sentences : []).map(
+            (sentence) => ({
+              ...sentence,
+              rawId: sentence.id,
+              id: `${practice.id}:${sentence.id}`,
+              topic: practice.topic,
+              time: practice.time,
+              date: practice.displayDate,
+            }),
+          ),
+        )
+        .filter(
+          (sentence) =>
+            !deletedSentenceIds.includes(sentence.id) &&
+            !deletedSentenceIds.includes(sentence.rawId),
+        ),
     [deletedSentenceIds, practices],
+  );
+  const allPhrases = useMemo(
+    () =>
+      practices
+        .flatMap((practice) => {
+          const source = practice.phrases?.length
+            ? practice.phrases
+            : (Array.isArray(practice.sentences)
+                ? practice.sentences
+                : []
+              ).flatMap((sentence, sentenceIndex) =>
+                sentence.phrase
+                  .split(/[;；]/)
+                  .map((phrase) => phrase.trim())
+                  .filter(Boolean)
+                  .map((phrase, phraseIndex) => ({
+                    id: `${practice.id}-legacy-phrase-${sentenceIndex + 1}-${phraseIndex + 1}`,
+                    text: phrase,
+                    zh: "",
+                    example: sentence.text,
+                  })),
+              );
+          return source
+            .map((phrase) => ({
+              ...phrase,
+              rawId: phrase.id,
+              id: `${practice.id}:${phrase.id}`,
+              topic: practice.topic,
+              time: practice.time,
+              date: practice.displayDate,
+            }))
+            .slice(0, 5);
+        })
+        .filter(
+          (phrase) =>
+            !deletedPhraseIds.includes(phrase.id) &&
+            !deletedPhraseIds.includes(phrase.rawId),
+        ),
+    [deletedPhraseIds, practices],
   );
 
   useEffect(() => {
@@ -320,12 +384,8 @@ export default function Home() {
         window.localStorage.getItem("gian-favorite-sentence-ids-v1") || "[]",
       );
       if (Array.isArray(savedDeleted) && Array.isArray(savedFavorites)) {
-        const validDeletedIds = savedDeleted.filter(
-          (id): id is string => typeof id === "string",
-        );
-        const validFavoriteIds = savedFavorites.filter(
-          (id): id is string => typeof id === "string",
-        );
+        const validDeletedIds = sanitizeStoredIds(savedDeleted);
+        const validFavoriteIds = sanitizeStoredIds(savedFavorites);
         restoreTimer = window.setTimeout(() => {
           setDeletedSentenceIds(validDeletedIds);
           setFavorites(validFavoriteIds);
@@ -337,6 +397,21 @@ export default function Home() {
     return () => {
       if (restoreTimer !== null) window.clearTimeout(restoreTimer);
     };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(
+        window.localStorage.getItem("gian-deleted-phrase-ids-v1") || "[]",
+      );
+      if (Array.isArray(saved)) {
+        const validIds = sanitizeStoredIds(saved);
+        const timer = window.setTimeout(() => setDeletedPhraseIds(validIds), 0);
+        return () => window.clearTimeout(timer);
+      }
+    } catch {
+      // A damaged preference should not prevent the phrase library loading.
+    }
   }, []);
 
   useEffect(() => {
@@ -367,12 +442,14 @@ export default function Home() {
             typeof item.date === "string" &&
             Array.isArray(item.scores)
           ) {
-            const previousId = sourceIds.get(item.sourceTurnId);
-            if (previousId && previousId !== item.id) {
-              merged.delete(previousId);
+            if (typeof item.sourceTurnId === "string") {
+              const previousId = sourceIds.get(item.sourceTurnId);
+              if (previousId && previousId !== item.id) {
+                merged.delete(previousId);
+              }
+              sourceIds.set(item.sourceTurnId, item.id);
             }
             merged.set(item.id, item);
-            sourceIds.set(item.sourceTurnId, item.id);
           }
         }
         const next = [...merged.values()].sort(comparePracticesNewestFirst);
@@ -440,6 +517,12 @@ export default function Home() {
   );
   const allVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
+  const allPhrasesSelected =
+    allPhrases.length > 0 &&
+    allPhrases.every((phrase) => selectedPhrases.includes(phrase.id));
+  const selectedPhraseRecords = allPhrases.filter((phrase) =>
+    selectedPhrases.includes(phrase.id),
+  );
   const latestPractice = practices[0];
   const practiceTotal = getScoreTotal(practice.scores);
   const isLatestPractice = practice.id === latestPractice.id;
@@ -491,9 +574,9 @@ export default function Home() {
 
   function toggleFavorite(sentenceId: string) {
     setFavorites((current) => {
-      const next = current.includes(sentenceId)
+      const next = sanitizeStoredIds(current.includes(sentenceId)
         ? current.filter((id) => id !== sentenceId)
-        : [...current, sentenceId];
+        : [...current, sentenceId]);
       try {
         window.localStorage.setItem(
           "gian-favorite-sentence-ids-v1",
@@ -514,7 +597,9 @@ export default function Home() {
     );
     if (!confirmed) return;
 
-    const nextDeletedIds = [...new Set([...deletedSentenceIds, ...chosenIds])];
+    const nextDeletedIds = sanitizeStoredIds([
+      ...new Set([...deletedSentenceIds, ...chosenIds]),
+    ]);
     setDeletedSentenceIds(nextDeletedIds);
     setFavorites((current) => {
       const next = current.filter((id) => !chosenIds.includes(id));
@@ -542,6 +627,40 @@ export default function Home() {
     }
   }
 
+  async function copySelectedPhrases() {
+    if (!selectedPhraseRecords.length) return;
+    const text = selectedPhraseRecords
+      .map(
+        (phrase, index) =>
+          `${index + 1}. ${phrase.text}${phrase.zh ? `\n   ${phrase.zh}` : ""}\n   例句：${phrase.example}`,
+      )
+      .join("\n\n");
+    await handleCopy(text, `已复制 ${selectedPhraseRecords.length} 个搭配`);
+  }
+
+  function deleteSelectedPhrases() {
+    const chosenIds = selectedPhraseRecords.map((phrase) => phrase.id);
+    if (!chosenIds.length) return;
+    const confirmed = window.confirm(
+      `从重点搭配 Library 删除选中的 ${chosenIds.length} 项？\n\n原始练习报告不会改变。`,
+    );
+    if (!confirmed) return;
+    const nextDeletedIds = sanitizeStoredIds([
+      ...new Set([...deletedPhraseIds, ...chosenIds]),
+    ]);
+    setDeletedPhraseIds(nextDeletedIds);
+    setSelectedPhrases([]);
+    try {
+      window.localStorage.setItem(
+        "gian-deleted-phrase-ids-v1",
+        JSON.stringify(nextDeletedIds),
+      );
+      showToast(`已删除 ${chosenIds.length} 个搭配`);
+    } catch {
+      showToast("本次已删除，但浏览器无法保存这项设置");
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -551,7 +670,7 @@ export default function Home() {
             {tab === "today" && "Latest report"}
             {tab === "history" && "Practice history"}
             {tab === "progress" && "Your progress"}
-            {tab === "sentences" && "Sentence library"}
+            {tab === "sentences" && "Learning library"}
           </h1>
           <p className="muted">
             {tab === "today" && (
@@ -565,7 +684,9 @@ export default function Home() {
             {tab === "history" && "All verified speaking practice reports"}
             {tab === "progress" && "All verified practices in time order"}
             {tab === "sentences" &&
-              `${allSentences.length} verified expressions worth keeping`}
+              (libraryMode === "sentences"
+                ? `${allSentences.length} verified sentences worth keeping`
+                : `${allPhrases.length} useful collocations from your real practices`)}
           </p>
           {lastChecked && (
             <p className={`sync-status ${syncError ? "error" : ""}`}>
@@ -682,7 +803,7 @@ export default function Home() {
               </button>
             </div>
             <div className="sentence-preview">
-              {practice.sentences.slice(0, 2).map((sentence) => (
+              {practice.sentences.slice(0, 4).map((sentence) => (
                 <article className="sentence-card" key={sentence.id}>
                   <p>{sentence.text}</p>
                   <span>{sentence.zh}</span>
@@ -846,7 +967,32 @@ export default function Home() {
 
       {tab === "sentences" && (
         <section className="section standalone sentence-library">
-          <div className="library-toolbar">
+          <div className="library-mode-tabs segmented">
+            <button
+              className={libraryMode === "sentences" ? "active" : ""}
+              onClick={() => {
+                setLibraryMode("sentences");
+                setSelected([]);
+                setSelectedPhrases([]);
+              }}
+            >
+              Sentences
+            </button>
+            <button
+              className={libraryMode === "phrases" ? "active" : ""}
+              onClick={() => {
+                setLibraryMode("phrases");
+                setSelected([]);
+                setSelectedPhrases([]);
+              }}
+            >
+              重点搭配
+            </button>
+          </div>
+
+          {libraryMode === "sentences" && (
+            <>
+            <div className="library-toolbar">
             <div className="segmented">
               <button
                 className={sentenceFilter === "all" ? "active" : ""}
@@ -962,6 +1108,103 @@ export default function Home() {
               </div>
             </div>
           )}
+            </>
+          )}
+
+          {libraryMode === "phrases" && (
+            <>
+              <div className="phrase-selection-toolbar">
+                <span>{allPhrases.length} 个重点搭配</span>
+                <button
+                  className="select-all"
+                  onClick={() =>
+                    setSelectedPhrases(
+                      allPhrasesSelected
+                        ? []
+                        : allPhrases.map((phrase) => phrase.id),
+                    )
+                  }
+                >
+                  {allPhrasesSelected ? "清空" : "全选"}
+                </button>
+              </div>
+              <div className="section-heading compact phrase-heading">
+                <div>
+                  <p className="eyebrow">KEY COLLOCATIONS</p>
+                  <h2>重点搭配</h2>
+                  <p className="muted">点击复制，方便随时复习和使用</p>
+                </div>
+              </div>
+              <div className="phrase-list">
+                {allPhrases.map((phrase) => (
+                  <article
+                    className={`phrase-library-card ${
+                      selectedPhrases.includes(phrase.id) ? "selected" : ""
+                    }`}
+                    key={phrase.id}
+                  >
+                    <button
+                      className="selection"
+                      aria-label={`Select ${phrase.text}`}
+                      aria-pressed={selectedPhrases.includes(phrase.id)}
+                      onClick={() =>
+                        setSelectedPhrases((current) =>
+                          current.includes(phrase.id)
+                            ? current.filter((id) => id !== phrase.id)
+                            : [...current, phrase.id],
+                        )
+                      }
+                    >
+                      {selectedPhrases.includes(phrase.id) && (
+                        <Icon name="check" />
+                      )}
+                    </button>
+                    <div className="phrase-library-copy">
+                      <p>{phrase.text}</p>
+                      {phrase.zh && <span>{phrase.zh}</span>}
+                      <blockquote>{phrase.example}</blockquote>
+                      <p className="source">
+                        {phrase.topic} · {phrase.date}, {phrase.time}
+                      </p>
+                    </div>
+                    <button
+                      aria-label={`Copy ${phrase.text}`}
+                      onClick={() =>
+                        handleCopy(
+                          `${phrase.text}${phrase.zh ? `\n${phrase.zh}` : ""}\n例句：${phrase.example}`,
+                          "搭配已复制",
+                        )
+                      }
+                    >
+                      <Icon name="copy" />
+                    </button>
+                  </article>
+                ))}
+                {allPhrases.length === 0 && (
+                  <div className="library-empty">
+                    <strong>还没有重点搭配</strong>
+                    <span>下一份推送报告会根据真实练习内容自动添加。</span>
+                  </div>
+                )}
+              </div>
+              {selectedPhraseRecords.length > 0 && (
+                <div className="copy-dock">
+                  <span>{selectedPhraseRecords.length} selected</span>
+                  <div className="copy-dock-actions">
+                    <button
+                      className="delete-selected"
+                      onClick={deleteSelectedPhrases}
+                    >
+                      <Icon name="delete" /> 删除
+                    </button>
+                    <button onClick={copySelectedPhrases}>
+                      <Icon name="copy" /> 复制
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </section>
       )}
 
@@ -970,7 +1213,7 @@ export default function Home() {
           ["today", "Latest"],
           ["history", "History"],
           ["progress", "Progress"],
-          ["sentences", "Sentences"],
+          ["sentences", "Library"],
         ].map(([id, label]) => (
           <button
             key={id}

@@ -37,7 +37,7 @@ License: [MIT](LICENSE)
 - Errors：错误原句、正确表达、原因和记忆提示
 - History：所有练习记录
 - Progress：历次练习的评分变化
-- Sentences：应记忆句子，可收藏、复制和删除
+- Library：每次练习精选 1–4 个最佳句子；重点搭配每次最多 5 个，均可勾选、全选、复制和删除
 - 手机 PWA：添加到主屏幕，像 App 一样打开
 
 完整流程是：
@@ -117,8 +117,9 @@ https://github.com/giantsand26/Gian-oral-practice
 4. 根据 AGENTS.example.md 建立只在本机保存的 AGENTS.md，自动填写我的项目、
    聊天、App 路径和本地时区；禁止把私人 ID 提交到 GitHub。
 5. 启动 App 和本地 API，确认首页与 /api/health 正常。
-6. 使用 Tailscale Serve 提供仅限我自己 tailnet 的手机访问地址。
-   禁止使用 Funnel，禁止公开到互联网。
+6. 获取我自己的准确 Tailscale HTTPS 主机名，把它写入此 App 的
+   GIAN_ALLOWED_HOSTS，再使用 Tailscale Serve 提供仅限我自己 tailnet 的
+   手机访问地址。禁止使用 Funnel，禁止公开到互联网，也不要允许任意 Host。
 7. 配置 Mac 登录后自动运行，只创建 Gian Oral Practice 自己的 LaunchAgent，
    不得修改其他 App 或 LaunchAgent。
 8. 创建每天 08:00、13:00、23:00 的 Codex 同步任务。
@@ -195,7 +196,8 @@ Gian Oral Practice 任务中说：
    - Pronunciation
    - Content
    - 详细错误
-   - 应记忆句子
+   - 从本次聊天中比较后精选的 1–4 个最佳句子
+   - 1–5 个重点搭配
 7. 再单独输入：
 
 ```text
@@ -353,7 +355,8 @@ Send `同步` in Codex for an immediate import. Create a separate automation at
 ### Mac and Tailscale
 
 Use `ops/com.gian.oral-practice.plist.example` as the launchd template. With
-the App running:
+the exact Tailscale hostname filled into `GIAN_ALLOWED_HOSTS` and the App
+running:
 
 ```bash
 tailscale serve --bg --https=443 3000

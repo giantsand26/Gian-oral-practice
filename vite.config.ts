@@ -6,6 +6,10 @@ import { defineConfig } from "vite";
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 const localHost = process.env.GIAN_BIND_HOST ?? "127.0.0.1";
 const localApiPort = process.env.GIAN_API_PORT ?? "8787";
+const allowedHosts = String(process.env.GIAN_ALLOWED_HOSTS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 
 export default defineConfig(() => {
   process.env.WRANGLER_WRITE_LOGS ??= "false";
@@ -15,9 +19,7 @@ export default defineConfig(() => {
   return {
     server: {
       host: localHost,
-      // The development server still binds to localhost by default. This lets
-      // users reach it through their own Tailscale Serve hostname.
-      allowedHosts: true as const,
+      allowedHosts,
       proxy: {
         "/api": {
           target: `http://127.0.0.1:${localApiPort}`,

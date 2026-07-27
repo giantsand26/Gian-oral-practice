@@ -47,7 +47,7 @@ test("server-renders the Gian Oral Practice mobile dashboard", async () => {
   assert.match(html, /Latest/);
   assert.match(html, /History/);
   assert.match(html, /Progress/);
-  assert.match(html, /Sentences/);
+  assert.match(html, /Library/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 

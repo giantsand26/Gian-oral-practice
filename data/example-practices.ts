@@ -17,6 +17,13 @@ export type Sentence = {
   phrase: string;
 };
 
+export type Phrase = {
+  id: string;
+  text: string;
+  zh: string;
+  example: string;
+};
+
 export type Practice = {
   id: string;
   date: string;
@@ -29,7 +36,8 @@ export type Practice = {
   summary: string;
   errors: PracticeError[];
   sentences: Sentence[];
-  sourceTurnId: string;
+  phrases?: Phrase[];
+  sourceTurnId?: string;
   receivedAt?: string;
 };
 
@@ -84,6 +92,21 @@ export const practices: Practice[] = [
         zh: "我的目标是让练习成为日常生活的一部分。",
         scene: "表达学习目标",
         phrase: "part of my daily routine",
+      },
+    ],
+    phrases: [
+      {
+        id: "demo-habit-p1",
+        text: "repeat consistently",
+        zh: "持续重复；坚持反复练习",
+        example:
+          "Small actions become powerful when I repeat them consistently.",
+      },
+      {
+        id: "demo-habit-p2",
+        text: "part of my daily routine",
+        zh: "日常生活的一部分",
+        example: "My goal is to make practice part of my daily routine.",
       },
     ],
     sourceTurnId: "fictional-demo-turn-learning-habit",

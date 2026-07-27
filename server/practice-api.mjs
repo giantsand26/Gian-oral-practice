@@ -56,11 +56,6 @@ function cleanText(value, name, maximumLength = 4000) {
   return cleaned;
 }
 
-function cleanOptionalText(value, name, maximumLength = 4000) {
-  if (value === undefined || value === null || value === "") return "";
-  return cleanText(value, name, maximumLength);
-}
-
 function cleanScore(value, name, allowNull = false) {
   if (allowNull && value === null) return null;
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -119,8 +114,7 @@ function normalizeScores(value) {
 function normalizeErrors(value, recordId) {
   if (!Array.isArray(value)) throw new Error("errors must be a list");
   return value.slice(0, 30).map((entry, index) => ({
-    id: cleanOptionalText(entry?.id, `errors[${index}].id`, 100) ||
-      `${recordId}-error-${index + 1}`,
+    id: `${recordId}-error-${index + 1}`,
     type: cleanText(entry?.type, `errors[${index}].type`, 100),
     original: cleanText(entry?.original, `errors[${index}].original`, 1000),
     corrected: cleanText(entry?.corrected, `errors[${index}].corrected`, 1000),
@@ -133,13 +127,27 @@ function normalizeSentences(value, recordId) {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error("sentences must contain at least one item");
   }
-  return value.slice(0, 20).map((entry, index) => ({
-    id: cleanOptionalText(entry?.id, `sentences[${index}].id`, 100) ||
-      `${recordId}-sentence-${index + 1}`,
+  if (value.length > 4) {
+    throw new Error("sentences must contain 1-4 items");
+  }
+  return value.map((entry, index) => ({
+    id: `${recordId}-sentence-${index + 1}`,
     text: cleanText(entry?.text, `sentences[${index}].text`, 1200),
     zh: cleanText(entry?.zh, `sentences[${index}].zh`, 1200),
     scene: cleanText(entry?.scene, `sentences[${index}].scene`, 300),
     phrase: cleanText(entry?.phrase, `sentences[${index}].phrase`, 300),
+  }));
+}
+
+function normalizePhrases(value, recordId) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 5) {
+    throw new Error("phrases must contain 1-5 items");
+  }
+  return value.map((entry, index) => ({
+    id: `${recordId}-phrase-${index + 1}`,
+    text: cleanText(entry?.text, `phrases[${index}].text`, 300),
+    zh: cleanText(entry?.zh, `phrases[${index}].zh`, 500),
+    example: cleanText(entry?.example, `phrases[${index}].example`, 1200),
   }));
 }
 
@@ -205,6 +213,7 @@ function normalizeRecord(payload) {
   if (!/\b(?:A1|A2|B1|B2|C1|C2)\b/i.test(cefr)) {
     throw new Error("cefr must include an A1-C2 level");
   }
+  const sentences = normalizeSentences(payload.sentences, id);
   return {
     id,
     date,
@@ -216,7 +225,8 @@ function normalizeRecord(payload) {
     scores,
     summary: cleanText(payload.summary, "summary", 5000),
     errors: normalizeErrors(payload.errors, id),
-    sentences: normalizeSentences(payload.sentences, id),
+    sentences,
+    phrases: normalizePhrases(payload.phrases, id),
     sourceTurnId: cleanText(
       payload.sourceTurnId || payload.source_turn_id,
       "sourceTurnId",
@@ -315,16 +325,39 @@ function enqueueMutation(task) {
   return result;
 }
 
+function hasAllowedHost(request) {
+  try {
+    const hostname = new URL(
+      `http://${request.headers.host || ""}`,
+    ).hostname.toLowerCase();
+    return hostname === "127.0.0.1" ||
+      hostname === "localhost" ||
+      hostname === "[::1]";
+  } catch {
+    return false;
+  }
+}
+
 function recordContent(record) {
   const content = { ...record };
   delete content.receivedAt;
   return JSON.stringify(content);
 }
 
+function browserRecord(record) {
+  const result = { ...record };
+  delete result.sourceTurnId;
+  return result;
+}
+
 await ensureRuntime();
 
 const server = createServer(async (request, response) => {
   try {
+    if (!hasAllowedHost(request)) {
+      sendJson(response, 421, { error: "Host is not allowed" });
+      return;
+    }
     const url = new URL(request.url || "/", `http://${request.headers.host}`);
     const route = url.pathname.replace(/^\/api(?=\/)/, "");
 
@@ -339,7 +372,7 @@ const server = createServer(async (request, response) => {
         `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`),
       );
       sendJson(response, 200, {
-        practices: records,
+        practices: records.map(browserRecord),
         updatedAt: records[0]?.receivedAt || null,
       });
       return;

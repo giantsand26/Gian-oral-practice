@@ -17,6 +17,11 @@
   <true/>
   <key>WorkingDirectory</key>
   <string>&lt;ABSOLUTE_APP_DIRECTORY&gt;</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>GIAN_ALLOWED_HOSTS</key>
+    <string>&lt;EXACT_TAILSCALE_HOSTNAME&gt;</string>
+  </dict>
   <key>StandardOutPath</key>
   <string>&lt;ABSOLUTE_APP_DIRECTORY&gt;/.runtime/app.stdout.log</string>
   <key>StandardErrorPath</key>
