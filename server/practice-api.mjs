@@ -160,9 +160,37 @@ function displayDate(date) {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
+function calendarDateInTimeZone(instant, timeZone) {
+  let parts;
+  try {
+    parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(instant);
+  } catch {
+    throw new Error("configured timezone is not a valid IANA timezone");
+  }
+  const value = (type) => parts.find((entry) => entry.type === type)?.value;
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 function normalizeRecord(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new Error("request body must be a JSON object");
+  }
+  if (
+    typeof payload.date !== "string" ||
+    payload.date !== payload.date.trim()
+  ) {
+    throw new Error("date must use exact YYYY-MM-DD without whitespace");
+  }
+  if (
+    typeof payload.time !== "string" ||
+    payload.time !== payload.time.trim()
+  ) {
+    throw new Error("time must use exact HH:mm without whitespace");
   }
   const date = cleanText(payload.date, "date", 10);
   const time = cleanText(payload.time, "time", 5);
@@ -183,11 +211,18 @@ function normalizeRecord(payload) {
   if (hours > 23 || minutes > 59) {
     throw new Error("time is not valid");
   }
-  const practiceTimestamp = new Date(`${date}T${time}:00+08:00`).getTime();
-  if (practiceTimestamp < Date.UTC(2020, 0, 1)) {
+  if (date < "2020-01-01") {
     throw new Error("practice time is outside the supported range");
   }
-  if (practiceTimestamp > Date.now() + 36 * 60 * 60 * 1000) {
+  const configuredTimeZone =
+    process.env.GIAN_TIMEZONE ||
+    process.env.NONG_TIMEZONE ||
+    "Asia/Shanghai";
+  const maximumDate = calendarDateInTimeZone(
+    new Date(Date.now() + 36 * 60 * 60 * 1000),
+    configuredTimeZone,
+  );
+  if (date > maximumDate) {
     throw new Error("practice time cannot be in the future");
   }
   const rawId =
