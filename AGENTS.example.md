@@ -44,6 +44,10 @@ report only when all of these conditions are true in the same ChatGPT chat:
    Rank candidates only within that specific conversation, then keep its best
    1–4 for naturalness, expressiveness, and reusability. Faithful polishing is
    allowed; unrelated or artificially literary invention and padding are not.
+7. `date` is a real calendar date in exact `YYYY-MM-DD` form. `time` is a
+   real 24-hour local time in exact `HH:mm` form. Reject `unknown`, `未记录`,
+   prose, empty strings, null, and out-of-range values. Never accept READY for
+   an invalid date or time, and never guess or silently repair one.
 
 Prefer `scores` as a five-element array in that fixed order. If ChatGPT returns
 an object whose keys are exactly the five dimension names and every nested

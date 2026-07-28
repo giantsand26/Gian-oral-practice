@@ -123,6 +123,23 @@ test("securely stores, lists and deduplicates complete practice reports", async 
     });
     assert.equal(unauthorized.status, 401);
 
+    for (const [index, time] of ["unknown", "8:30", "24:00", "12:60"].entries()) {
+      const invalidTime = await fetch(`${api.baseUrl}/api/practices`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${api.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...sampleReport,
+          id: `practice-invalid-time-${index}`,
+          sourceTurnId: `test-source-turn-invalid-time-${index}`,
+          time,
+        }),
+      });
+      assert.equal(invalidTime.status, 400, `time ${time} must be rejected`);
+    }
+
     const incomplete = await fetch(`${api.baseUrl}/api/practices`, {
       method: "POST",
       headers: {
