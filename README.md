@@ -115,7 +115,8 @@ https://github.com/giantsand26/Gian-oral-practice
 2. 先检查 Node.js、npm、Git 和 Tailscale；缺少软件时告诉我去哪个官方网站安装。
 3. 下载代码、安装依赖、构建并运行全部测试。
 4. 根据 AGENTS.example.md 建立只在本机保存的 AGENTS.md，自动填写我的项目、
-   聊天、App 路径和本地时区；禁止把私人 ID 提交到 GitHub。
+   聊天、App 路径和本地 IANA 时区；同时把该时区写入 LaunchAgent 的
+   GIAN_TIMEZONE；禁止把私人 ID 提交到 GitHub。
 5. 启动 App 和本地 API，确认首页与 /api/health 正常。
 6. 获取我自己的准确 Tailscale HTTPS 主机名，把它写入此 App 的
    GIAN_ALLOWED_HOSTS，再使用 Tailscale Serve 提供仅限我自己 tailnet 的

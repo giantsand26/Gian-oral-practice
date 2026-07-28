@@ -123,7 +123,15 @@ test("securely stores, lists and deduplicates complete practice reports", async 
     });
     assert.equal(unauthorized.status, 401);
 
-    for (const [index, time] of ["unknown", "8:30", "24:00", "12:60"].entries()) {
+    for (const [index, time] of [
+      "unknown",
+      "8:30",
+      "24:00",
+      "12:60",
+      " 08:30 ",
+      "08:30\n",
+      "SOURCE_MESSAGE_TIME",
+    ].entries()) {
       const invalidTime = await fetch(`${api.baseUrl}/api/practices`, {
         method: "POST",
         headers: {

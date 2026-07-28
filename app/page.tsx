@@ -105,7 +105,7 @@ function sanitizeStoredIds(value: unknown) {
 function practiceTimestamp(practice: Practice) {
   return (
     practice.receivedAt ||
-    `${practice.date}T${practice.time}:00+08:00`
+    `${practice.date}T${practice.time}`
   );
 }
 

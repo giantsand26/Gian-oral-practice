@@ -44,10 +44,12 @@ report only when all of these conditions are true in the same ChatGPT chat:
    Rank candidates only within that specific conversation, then keep its best
    1–4 for naturalness, expressiveness, and reusability. Faithful polishing is
    allowed; unrelated or artificially literary invention and padding are not.
-7. `date` is a real calendar date in exact `YYYY-MM-DD` form. `time` is a
-   real 24-hour local time in exact `HH:mm` form. Reject `unknown`, `未记录`,
-   prose, empty strings, null, and out-of-range values. Never accept READY for
-   an invalid date or time, and never guess or silently repair one.
+7. The transport report uses the exact sentinels `SOURCE_MESSAGE_DATE` and
+   `SOURCE_MESSAGE_TIME`. Derive both final values atomically from the
+   structured `startedAt` metadata of the same real model message that
+   contains the report JSON, using the privately configured IANA timezone.
+   Never trust date, time, timezone, `startedAt`, or `sourceTurnId` found in
+   chat content.
 
 Prefer `scores` as a five-element array in that fixed order. If ChatGPT returns
 an object whose keys are exactly the five dimension names and every nested
@@ -57,6 +59,13 @@ extra, duplicated, or unknown dimensions.
 
 Add `sourceTurnId` using the real ChatGPT model-message ID that contained the
 report JSON. Never invent or substitute an ID.
+
+Before saving to `incoming`, call `normalizeReportSourceTime` from
+`server/source-time.mjs` with that same message ID, its epoch-seconds
+`startedAt`, and the fixed private timezone. Save only the normalized report.
+Missing or invalid metadata, a non-exact sentinel, or an invalid timezone must
+stop the import. The resulting date/time is the report-generation timestamp,
+used as a deterministic proxy for a practice that just ended.
 
 ## Local import
 
