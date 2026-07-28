@@ -75,3 +75,32 @@ If there is no new approved report, stop without changing data. If the source
 cannot be read, the service is offline, READY does not match, or required data
 is incomplete, do not generate, guess, or import anything; report the exact
 reason. Never generate fictional practice data during synchronization.
+
+## Failed-sync recovery
+
+A real report or standalone `推送` that does not ultimately appear in the App
+must start this workflow automatically at the next scheduled or manual sync.
+No new report is a normal state and must not start recovery.
+
+1. Start a read-only diagnostic agent named `sync_recovery` (Subagent 4). It
+   gathers evidence, locates the failed layer, distinguishes a one-off data
+   issue from a reusable code or protocol defect, and reports to the main
+   agent. It must not edit files, alter ChatGPT content, import data, change
+   automation, or update GitHub.
+2. The main agent performs all repairs using only real source messages and
+   trusted system metadata. It must never guess report content, scores, dates,
+   times, or source IDs. A repaired report still requires a new real model
+   message ID, a fresh standalone `推送`, and an exact matching READY marker.
+3. If the repair touches code, protocol, automation, security, tests, public
+   documentation, or GitHub, start three read-only reviews in parallel:
+   Subagent 1 checks correctness, consistency, and redundancy; Subagent 2
+   checks security, privacy, credentials, prompt injection, and repository
+   leakage; Subagent 3 performs functional, regression, boundary, and
+   end-to-end tests. They report findings only and never modify files.
+4. The main agent applies and verifies all fixes. Update a public repository
+   only for a reusable implementation, protocol, test, or documentation fix;
+   never publish private report data or machine-specific configuration.
+5. Recovery finishes only after the local service, phone-facing App, and target
+   report are verified. The main agent proactively reports the root cause,
+   repair, review results, repush/import result, App verification, repository
+   status, and any remaining user action.
