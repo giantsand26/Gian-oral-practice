@@ -21,6 +21,8 @@
   <dict>
     <key>GIAN_ALLOWED_HOSTS</key>
     <string>&lt;EXACT_TAILSCALE_HOSTNAME&gt;</string>
+    <key>GIAN_TIMEZONE</key>
+    <string>&lt;IANA_TIMEZONE&gt;</string>
   </dict>
   <key>StandardOutPath</key>
   <string>&lt;ABSOLUTE_APP_DIRECTORY&gt;/.runtime/app.stdout.log</string>
